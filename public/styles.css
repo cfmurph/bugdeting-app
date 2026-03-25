@@ -1,0 +1,106 @@
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #f4f4f5;
+}
+
+body {
+  margin: 0;
+}
+
+.wrap {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.lead {
+  color: #444;
+  margin-top: 0;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.panel h2 {
+  font-size: 1.1rem;
+  margin-top: 0;
+}
+
+.example {
+  font-size: 0.85rem;
+  overflow-x: auto;
+  padding: 0.75rem;
+  background: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #e4e4e7;
+}
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+input[type='password'],
+input[type='file'] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+button[type='submit'] {
+  padding: 0.5rem 1.25rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-top: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  white-space: pre-wrap;
+}
+
+.status:empty {
+  display: none;
+}
+
+.status.ok {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+}
+
+.status.err {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.status.warn {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}

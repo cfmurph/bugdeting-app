@@ -1,4 +1,6 @@
+import path from 'path';
 import express, { type Express, type Response } from 'express';
+import multer from 'multer';
 import { and, desc, eq } from 'drizzle-orm';
 import type { AppContext } from './context';
 import { getContext } from './context';
@@ -6,7 +8,13 @@ import { linkedItems, syncRuns } from './db/schema';
 import { decryptToken, encryptToken } from './utils/tokenCrypto';
 import { plaidCountryCodes, plaidProductsForBudgetApp } from './integrations/plaidClient';
 import { requireApiKey } from './middleware/requireApiKey';
+import { parseCsvTransactionBuffer } from './utils/csvTransactionImport';
 import { verifyPlaidWebhook } from './utils/plaidWebhookVerify';
+
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 function plaidNotConfigured(res: Response): void {
   res.status(503).json({ error: 'Plaid is not configured (set PLAID_CLIENT_ID and PLAID_SECRET)' });
@@ -302,6 +310,26 @@ export function createApp(ctx: AppContext = getContext()): Express {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });
+
+  app.post('/import/csv', csvUpload.single('file'), (req, res) => {
+    if (!req.file?.buffer) {
+      res.status(400).json({ error: 'file required (form field name: file)' });
+      return;
+    }
+    const { rows, errors: parseErrors } = parseCsvTransactionBuffer(req.file.buffer);
+    if (rows.length === 0) {
+      res.status(422).json({ imported: 0, errors: parseErrors });
+      return;
+    }
+    try {
+      const imported = ctx.transactionService.importCsvRows(ctx.defaultUserId, rows);
+      res.status(200).json({ imported, errors: parseErrors });
+    } catch (e) {
+      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
+  app.use(express.static(path.join(process.cwd(), 'public')));
 
   return app;
 }

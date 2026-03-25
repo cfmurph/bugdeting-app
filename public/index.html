@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Import transactions (CSV)</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Import transactions from CSV</h1>
+      <p class="lead">
+        Upload a CSV file. Rows are added to your manual account (same rules as the API). Requires the same API key as
+        <code>/budget</code> and other endpoints when <code>API_KEY</code> is set on the server.
+      </p>
+
+      <section class="panel" aria-labelledby="format-heading">
+        <h2 id="format-heading">CSV format</h2>
+        <p>First row must be a header with these columns (any column order; names are case-insensitive):</p>
+        <ul>
+          <li><code>date</code> — <code>YYYY-MM-DD</code></li>
+          <li><code>description</code> — text (can include commas if the field is quoted)</li>
+          <li><code>amount</code> — positive number in dollars (e.g. <code>12.50</code> or <code>1,234.56</code>)</li>
+          <li><code>type</code> — <code>income</code> or <code>expense</code></li>
+        </ul>
+        <p>Example:</p>
+        <pre class="example" role="doc-example">date,description,amount,type
+2024-01-15,Groceries,45.67,expense
+2024-01-16,"Paycheck, net",2500.00,income</pre>
+      </section>
+
+      <form id="import-form" class="panel">
+        <div class="field">
+          <label for="api-key">API key</label>
+          <input
+            id="api-key"
+            name="api-key"
+            type="password"
+            autocomplete="off"
+            placeholder="X-API-Key or leave empty if server has no API_KEY"
+          />
+        </div>
+        <div class="field">
+          <label for="csv-file">CSV file</label>
+          <input id="csv-file" name="file" type="file" accept=".csv,text/csv" required />
+        </div>
+        <button type="submit" id="submit-btn">Import</button>
+      </form>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

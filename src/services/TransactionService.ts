@@ -3,6 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '../db/schema';
 import { accounts, linkedItems, transactions } from '../db/schema';
+import type { ParsedCsvRow } from '../utils/csvTransactionImport';
 import { CategorizationService } from './CategorizationService';
 
 export type ManualTransactionInput = {
@@ -19,13 +20,13 @@ export class TransactionService {
     this.categorization = new CategorizationService(db);
   }
 
-  private getManualAccountId(userId: number): number {
+  private getManualAccountId(userId: number, db: BetterSQLite3Database<typeof schema> = this.db): number {
     const manualItemId = `manual-local-${userId}`;
-    const [item] = this.db.select().from(linkedItems).where(eq(linkedItems.plaidItemId, manualItemId)).limit(1).all();
+    const [item] = db.select().from(linkedItems).where(eq(linkedItems.plaidItemId, manualItemId)).limit(1).all();
     if (!item) {
       throw new Error('Default manual linked item missing; run seed');
     }
-    const [acct] = this.db
+    const [acct] = db
       .select()
       .from(accounts)
       .where(eq(accounts.linkedItemId, item.id))
@@ -69,6 +70,43 @@ export class TransactionService {
   addTransactionLegacy(userId: number, type: 'income' | 'expense', amount: number, description: string, date: Date | string): void {
     const d = typeof date === 'string' ? date : date.toISOString().slice(0, 10);
     this.addManualTransaction(userId, { type, amount, description, date: d });
+  }
+
+  /** Inserts validated CSV rows in one DB transaction; applies category rules like manual entry. */
+  importCsvRows(userId: number, rows: ParsedCsvRow[]): number {
+    if (rows.length === 0) {
+      return 0;
+    }
+    return this.db.transaction((tx) => {
+      const accountId = this.getManualAccountId(userId, tx);
+      let imported = 0;
+      for (const row of rows) {
+        const amountAbs = Math.round(row.amountDollars * 100);
+        const amountCents = row.type === 'expense' ? Math.abs(amountAbs) : -Math.abs(amountAbs);
+        const dedupeKey = `csv-import:${userId}:${row.line}:${randomUUID()}`;
+        const catId = this.categorization.resolveCategoryId(userId, null, row.description, null, null);
+        tx.insert(transactions)
+          .values({
+            accountId,
+            dedupeKey,
+            providerTransactionId: dedupeKey,
+            amountCents,
+            isoCurrencyCode: 'CAD',
+            date: row.date,
+            name: row.description,
+            merchantName: null,
+            pending: false,
+            providerCategoryPrimary: null,
+            providerCategoryDetail: null,
+            userCategoryId: catId,
+            isTransfer: false,
+            source: 'csv_import',
+          })
+          .run();
+        imported += 1;
+      }
+      return imported;
+    });
   }
 
   listForUser(userId: number, limit = 500) {
