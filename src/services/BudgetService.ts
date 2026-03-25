@@ -65,4 +65,32 @@ export class BudgetService {
       .groupBy(transactions.userCategoryId, categories.slug, categories.name)
       .all();
   }
+
+  /** Per-day expense (outflows) and income (inflows), excluding transfers. */
+  dailyTotalsByDate(userId: number, range: { start: string; end: string }) {
+    return this.db
+      .select({
+        date: transactions.date,
+        expenseCents: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.amountCents} > 0 AND ${transactions.isTransfer} = 0 THEN ${transactions.amountCents} ELSE 0 END), 0)`,
+        incomeCents: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.amountCents} < 0 AND ${transactions.isTransfer} = 0 THEN -${transactions.amountCents} ELSE 0 END), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+      .innerJoin(linkedItems, eq(accounts.linkedItemId, linkedItems.id))
+      .where(
+        and(
+          eq(linkedItems.userId, userId),
+          gte(transactions.date, range.start),
+          lte(transactions.date, range.end),
+        ),
+      )
+      .groupBy(transactions.date)
+      .orderBy(transactions.date)
+      .all()
+      .map((r) => ({
+        date: r.date,
+        expenseCents: Number(r.expenseCents),
+        incomeCents: Number(r.incomeCents),
+      }));
+  }
 }
